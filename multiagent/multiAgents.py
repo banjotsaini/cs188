@@ -152,73 +152,46 @@ class MinimaxAgent(MultiAgentSearchAgent):
         if the agent is MIN: return max-value(state)
         '''
 
-        legalActions = gameState.getLegalActions(0)
-        maxValue = float('-inf')
         bestAction = None
-    
-        for action in legalActions:
+        maxValue = float('-inf')
+
+        for action in gameState.getLegalActions(0):
             successor = gameState.generateSuccessor(0, action)
-            actionValue = self.value(successor, 1, 0)
-        
-            if actionValue > maxValue:
-                maxValue = actionValue
+            value = self.minValue(successor, 1, 0)
+            if value > maxValue:
+                maxValue = value
                 bestAction = action
-    
-        return bestAction
         
+        return bestAction
 
-    def value(self, gameState: GameState, agentIndex, depth):
-
+    def maxValue(self, gameState, depth):
         if gameState.isWin() or gameState.isLose() or depth == self.depth:
             return self.evaluationFunction(gameState)
         
-        if agentIndex == 0:
-            return self.maxValue(agentIndex, gameState, depth)
-        else:
-            return self.minValue(agentIndex, gameState, depth)
+        value = float('-inf')
+        for action in gameState.getLegalActions(0):
+            successor = gameState.generateSuccessor(0, action)
+            value = max(value, self.minValue(successor, 1, depth))
         
+        return value
 
-    def maxValue(self, agentIndex, gameState: GameState, depth):
-        '''
-        recall pseudocode:
-        intialize v = -00
-        for each successor of state:
-            v = max(v, value(successor))
-        return v
-        '''
-        v = float('-inf')
-        legalActions = gameState.getLegalActions(agentIndex)
-        successors = (gameState.generateSuccessor(0, action) for action in legalActions)
+    def minValue(self, gameState, agentIndex, depth):
+        if gameState.isWin() or gameState.isLose() or depth == self.depth:
+            return self.evaluationFunction(gameState)
+        
+        value = float('inf')
+        numAgents = gameState.getNumAgents()
+        nextAgent = (agentIndex + 1) % numAgents
+        nextDepth = depth + (1 if nextAgent == 0 else 0)
 
-        for successor in successors:
-           v = max(v, self.value(successor, 1, depth))
-
-        return v
-    
-    def minValue(self, agentIndex, gameState: GameState, depth):
-        '''
-        recall psuedocode:
-        intialise v = oo
-        for each successor of state
-            v = min(v, value(successor))
-        return v
-        '''
-        v = float('inf')
-        legalActions = gameState.getLegalActions(agentIndex)
-        successors = [gameState.generateSuccessor(agentIndex, action) for action in legalActions]
-        nextAgent = agentIndex + 1
-
-
-        if nextAgent >= gameState.getNumAgents():
-            nextAgent = 0
-            depth += 1
-
-        for successor in successors:
-            v = min(v, self.value(successor, nextAgent, depth))
-
-        return v
-
-        util.raiseNotDefined()
+        for action in gameState.getLegalActions(agentIndex):
+            successor = gameState.generateSuccessor(agentIndex, action)
+            if nextAgent == 0:
+                value = min(value, self.maxValue(successor, nextDepth))
+            else:
+                value = min(value, self.minValue(successor, nextAgent, nextDepth))
+        
+        return value
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
@@ -231,85 +204,57 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         """
         "*** YOUR CODE HERE ***"
 
-        legalActions = gameState.getLegalActions(0)
-        successors = [gameState.generateSuccessor(0, action) for action in legalActions]
-        maxValue = float('-inf')
-        bestAction = None
         alpha = float('-inf')
         beta = float('inf')
-        
-    
-        for action in legalActions:
-            successor = gameState.generateSuccessor(0, action)
-            actionValue = self.value(successor, 1, 0, alpha, beta)
-        
-            if actionValue > maxValue:
-                maxValue = actionValue
-                bestAction = action
-    
-        return bestAction
-            
-    def value(self, gameState: GameState, agentIndex, depth, alpha, beta):
+        bestAction = None
+        maxValue = float('-inf')
 
+        for action in gameState.getLegalActions(0):
+            successor = gameState.generateSuccessor(0, action)
+            value = self.minValue(successor, 1, 0, alpha, beta)
+            if value > maxValue:
+                maxValue = value
+                bestAction = action
+                alpha = value
+            alpha = max(alpha, value)
+        
+        return bestAction
+
+    def maxValue(self, gameState, depth, alpha, beta):
         if gameState.isWin() or gameState.isLose() or depth == self.depth:
             return self.evaluationFunction(gameState)
         
-        if agentIndex == 0:
-            return self.maxValue(agentIndex, gameState, depth, alpha, beta)
-        else:
-            return self.minValue(agentIndex, gameState, depth, alpha, beta)
+        value = float('-inf')
+        for action in gameState.getLegalActions(0):
+            successor = gameState.generateSuccessor(0, action)
+            value = max(value, self.minValue(successor, 1, depth, alpha, beta))
+            if value > beta:
+                return value
+            alpha = max(alpha, value)
         
+        return value
 
-    def maxValue(self, agentIndex, gameState: GameState, depth, alpha, beta):
-        '''
-        recall pseudocode:
-        intialize v = -00
-        for each successor of state:
-            v = max(v, value(successor,alpha,beta))
-            if v > beta return v
-            alpha = max(alpha,v)
-        return v
-        '''
-        v = float('-inf')
-        legalActions = gameState.getLegalActions(agentIndex)
-        successors = (gameState.generateSuccessor(0, action) for action in legalActions)
+    def minValue(self, gameState, agentIndex, depth, alpha, beta):
+        if gameState.isWin() or gameState.isLose() or depth == self.depth:
+            return self.evaluationFunction(gameState)
+        
+        value = float('inf')
+        numAgents = gameState.getNumAgents()
+        nextAgent = (agentIndex + 1) % numAgents
+        nextDepth = depth + (1 if nextAgent == 0 else 0)
 
-        for successor in successors:
-           v = max(v, self.value(successor, 1, depth, alpha, beta))
-           if v > beta:
-               return v
-           alpha = max(alpha, v)
-
-        return v
-    
-    def minValue(self, agentIndex, gameState: GameState, depth, alpha, beta):
-        '''
-        recall psuedocode:
-        intialise v = oo
-        for each successor of state
-            v = min(v, value(successor,alpha,beta))
-            if v > alpha return v
-            beta = min(beta,v)
-        return v
-        '''
-        v = float('inf')
-        legalActions = gameState.getLegalActions(agentIndex)
-        successors = [gameState.generateSuccessor(agentIndex, action) for action in legalActions]
-        nextAgent = agentIndex + 1
-
-
-        if nextAgent >= gameState.getNumAgents():
-            nextAgent = 0
-            depth += 1
-
-        for successor in successors:
-            v = min(v, self.value(successor, nextAgent, depth, alpha ,beta))
-            if v > alpha:
-                return v
-            beta = min(beta, v)
-
-        return v
-
+        for action in gameState.getLegalActions(agentIndex):
+            successor = gameState.generateSuccessor(agentIndex, action)
+            if nextAgent == 0:
+                value = min(value, self.maxValue(successor, nextDepth, alpha, beta))
+            else:
+                value = min(value, self.minValue(successor, nextAgent, nextDepth, alpha, beta))
+            
+            if value < alpha:
+                return value
+            beta = min(beta, value)
+        
+        return value
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
       Your expectimax agent (question 4)
