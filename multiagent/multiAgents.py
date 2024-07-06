@@ -268,6 +268,24 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         legal moves.
         """
         "*** YOUR CODE HERE ***"
+        def expectimax(state, depth, agentIndex):
+            if state.isWin() or state.isLose() or depth == 0:
+                return self.evaluationFunction(state)
+
+            if agentIndex == 0:  
+                return max(expectimax(state.generateSuccessor(agentIndex, action), depth, 1)
+                           for action in state.getLegalActions(agentIndex))
+            else:  
+                nextAgent = (agentIndex + 1) % state.getNumAgents()
+                nextDepth = depth - 1 if nextAgent == 0 else depth
+                actions = state.getLegalActions(agentIndex)
+                probabilities = [1.0 / len(actions)] * len(actions)  
+                return sum(prob * expectimax(state.generateSuccessor(agentIndex, action), nextDepth, nextAgent)
+                           for action, prob in zip(actions, probabilities))
+
+        bestAction = max(gameState.getLegalActions(0),
+                         key=lambda action: expectimax(gameState.generateSuccessor(0, action), self.depth, 1))
+        return bestAction
         util.raiseNotDefined()
 
 def betterEvaluationFunction(currentGameState: GameState):
@@ -278,6 +296,33 @@ def betterEvaluationFunction(currentGameState: GameState):
     DESCRIPTION: <write something here so we know what you did>
     """
     "*** YOUR CODE HERE ***"
+    pacmanPos = currentGameState.getPacmanPosition()
+    foodGrid = currentGameState.getFood()
+    ghostStates = currentGameState.getGhostStates()
+    scaredTimes = [ghostState.scaredTimer for ghostState in ghostStates]
+
+    foodList = foodGrid.asList()
+    foodDistances = [manhattanDistance(pacmanPos, foodPos) for foodPos in foodList]
+    ghostDistances = [manhattanDistance(pacmanPos, ghost.getPosition()) for ghost in ghostStates]
+
+    if foodDistances:
+        closestFoodDist = min(foodDistances)
+    else:
+        closestFoodDist = 1 
+
+    if ghostDistances:
+        closestGhostDist = min(ghostDistances)
+    else:
+        closestGhostDist = 1  
+
+    foodScore = -1.5 * closestFoodDist
+    ghostScore = 2 * (1.0 / closestGhostDist if closestGhostDist > 0 else 100)
+
+    scaredScore = sum(scaredTimes)
+
+    finalScore = currentGameState.getScore() + foodScore + ghostScore + scaredScore
+
+    return finalScore
     util.raiseNotDefined()
 
 # Abbreviation
